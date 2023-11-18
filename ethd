@@ -307,7 +307,12 @@ upgrade_postgres() {
     __target_pg=16
     __during_postgres=1
 
-    __source_pg="$(dodocker run --rm -v "$(dodocker volume ls -q -f "name=erapg-data")":"/var/lib/postgresql/data" \
+    __source_vol="$(basename "$(pwd)")_erapg-data"
+    if [ -z "$(dodocker volume ls -q -f "name=${__source_vol}")" ]; then
+      return 0
+    fi
+
+    __source_pg="$(dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
         alpine:3 cat /var/lib/postgresql/data/PG_VERSION)"
 
     if [ "${__source_pg}" -lt "${__target_pg}" ]; then
@@ -339,7 +344,7 @@ upgrade_postgres() {
 
     dodocker pull "pats22/postgres-upgrade:${__source_pg}-to-${__target_pg}"
     dodocker volume create "${__migrated_vol}"
-    dodocker run --rm -v "$(dodocker volume ls -q -f "name=erapg-data")":"/var/lib/postgresql/${__source_pg}/data" \
+    dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/${__source_pg}/data" \
         -v "${__migrated_vol}":"/var/lib/postgresql/${__target_pg}/data" \
         "pats22/postgres-upgrade:${__source_pg}-to-${__target_pg}"
     # Adjust ownership. We use 70; postgres-upgrade creates it with 999
@@ -354,15 +359,15 @@ upgrade_postgres() {
     echo
     echo "Migration complete, copying data in erapg-data volume to backup"
     dodocker volume create "${__backup_vol}"
-    dodocker run --rm -v "$(dodocker volume ls -q -f "name=erapg-data")":"/var/lib/postgresql/data" \
+    dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
         -v "${__backup_vol}":"/var/lib/postgresql/${__source_pg}/data" \
         alpine:3 cp -a /var/lib/postgresql/data/. "/var/lib/postgresql/${__source_pg}/data/"
 
     __during_migrate=1
     echo "Moving migrated data to erapg-data volume"
-    dodocker run --rm -v "$(dodocker volume ls -q -f "name=erapg-data")":"/var/lib/postgresql/data" \
+    dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
         alpine:3 rm -rf /var/lib/postgresql/data/*
-    dodocker run --rm -v "$(dodocker volume ls -q -f "name=erapg-data")":"/var/lib/postgresql/data" \
+    dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
         -v "${__migrated_vol}":"/var/lib/postgresql/${__target_pg}/data" \
         alpine:3 cp -a "/var/lib/postgresql/${__target_pg}/data/." /var/lib/postgresql/data/
 
