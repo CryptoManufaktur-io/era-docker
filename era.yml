@@ -1,0 +1,95 @@
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
+services:
+  era-node:
+    restart: "unless-stopped"
+    image: matterlabs/external-node-public:${NODE_DOCKER_TAG}
+    environment: # The node is configured entirely via ENV variables
+      - DATABASE_URL=postgres://postgres:postgres@postgres/eranode
+      - DATABASE_POOL_SIZE=50
+      - EN_STATE_CACHE_PATH=/db/state_keeper
+      - EN_MERKLE_TREE_PATH=/db/lightweight
+      - EN_ETH_CLIENT_URL=${L1_RPC}
+      - EN_HTTP_PORT=${RPC_PORT:-3060}
+      - EN_WS_PORT=${WS_PORT:-3061}
+      - EN_PROMETHEUS_PORT=${METRICS_PORT:-}
+      - EN_HEALTHCHECK_PORT=3081
+      - EN_REQ_ENTITIES_LIMIT=10000
+      - EN_FILTERS_LIMIT=10000
+      - EN_SUBSCRIPTIONS_LIMIT=10000
+      - EN_PUBSUB_POLLING_INTERVAL=200
+      - EN_THREADS_PER_SERVER=128
+      - EN_MAX_NONCE_AHEAD=50
+      - EN_GAS_PRICE_SCALE_FACTOR=1.2
+      - EN_ESTIMATE_GAS_SCALE_FACTOR=1.2
+      - EN_ESTIMATE_GAS_ACCEPTABLE_OVERESTIMATION=1000
+      - EN_MAX_TX_SIZE=1000000
+      - EN_API_NAMESPACES=eth,net,web3,zks,pubsub
+      - MISC_LOG_FORMAT=plain
+      - MISC_SENTRY_URL=unset
+      - MISC_SENTRY_PANIC_INTERVAL=1800
+      - MISC_SENTRY_ERROR_INTERVAL=10800
+      - MISC_OTLP_URL=unset
+      - RUST_LOG=${RUST_LOG}
+      - RUST_BACKTRACE=full
+      - RUST_LIB_BACKTRACE=1
+      - EN_MAIN_NODE_URL=${MAIN_NODE_URL}
+      - EN_L2_CHAIN_ID=${L2_CHAIN_ID}
+      - EN_L1_CHAIN_ID=${L1_CHAIN_ID}
+      - EN_BOOTLOADER_HASH=0x010007794e73f682ad6d27e86b6f71bbee875fc26f5708d1713e7cfd476098d3
+      - EN_DEFAULT_AA_HASH=0x0100067d861e2f5717a12c3e869cfb657793b86bbb0caa05cc1421f16c5217bc
+      - ZKSYNC_HOME=/
+    volumes:
+      - eranode-data:/db
+      - /etc/localtime:/etc/localtime:ro
+    <<: *logging
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${RPC_HOST:-era}.service=${RPC_HOST:-era}
+      - traefik.http.routers.${RPC_HOST:-era}.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-era}.rule=Host(`${RPC_HOST:-era}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-era}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${RPC_HOST:-era}lb.service=${RPC_HOST:-era}
+      - traefik.http.routers.${RPC_HOST:-era}lb.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-era}lb.rule=Host(`${RPC_LB:-era-lb}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-era}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${RPC_HOST:-era}.loadbalancer.server.port=${RPC_PORT:-3060}
+      - traefik.http.routers.${WS_HOST:-eraws}.service=${WS_HOST:-eraws}
+      - traefik.http.routers.${WS_HOST:-eraws}.entrypoints=websecure
+      - traefik.http.routers.${WS_HOST:-eraws}.rule=Host(`${WS_HOST:-eraws}.${DOMAIN}`)
+      - traefik.http.routers.${WS_HOST:-eraws}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${WS_HOST:-eraws}lb.service=${WS_HOST:-eraws}
+      - traefik.http.routers.${WS_HOST:-eraws}lb.entrypoints=websecure
+      - traefik.http.routers.${WS_HOST:-eraws}lb.rule=Host(`${WS_LB:-eraws-lb}.${DOMAIN}`)
+      - traefik.http.routers.${WS_HOST:-eraws}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${WS_HOST:-eraws}.loadbalancer.server.port=${WS_PORT:-3061}
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=${METRICS_PORT:-}
+
+  postgres:
+    restart: "unless-stopped"
+    image: "postgres:${PG_DOCKER_TAG}"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=eranode
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      start_period: 5s
+      interval: 10s
+      timeout: 5s
+    volumes:
+      - ${PG_SNAPSHOT:-.nada}:/tmp/snapshot.pgdump
+      - ./load-snapshot.sh:/docker-entrypoint-initdb.d/load-snapshot.sh
+      - erapg-data:/var/lib/postgresql/data/
+
+volumes:
+  eranode-data:
+  erapg-data:

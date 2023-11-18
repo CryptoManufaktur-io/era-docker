@@ -1,0 +1,6 @@
+# To be used with era.yml
+services:
+  era-node:
+    ports:
+      - ${RPC_PORT:-3060}:${RPC_PORT:-3060}/tcp
+      - ${WS_PORT:-3061}:${WS_PORT:-3061}/tcp
