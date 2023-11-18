@@ -1,4 +1,5 @@
 .env*
 *.swp
 *.pgdump
+*.aria2
 .nada
