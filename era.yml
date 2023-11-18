@@ -48,7 +48,7 @@ services:
     volumes:
       - eranode-data:/db
       - /etc/localtime:/etc/localtime:ro
-     depends_on:
+    depends_on:
       postgres:
         condition: service_healthy
     <<: *logging
