@@ -736,6 +736,7 @@ help() {
 # Main body from here
 ENV_FILE=.env
 __during_update=0
+__during_postgres=0
 __during_migrate=0
 __migrated=0
 __command=""
