@@ -16,11 +16,6 @@ if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by us
     __list=""
   fi
 
-  __parallel=$(($(nproc)/2))
-  if [ "${__parallel}" -lt 2 ]; then
-    __parallel=2
-  fi
-
-  pg_restore -v -d eranode ${__list} -j ${__parallel} /tmp/snapshot.pgdump
+  pg_restore -v -d eranode ${__list} /tmp/snapshot.pgdump
   psql -d eranode -c "GRANT ALL ON SCHEMA public TO mainnet2;"
 fi

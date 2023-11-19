@@ -93,6 +93,7 @@ services:
       - ${PG_SNAPSHOT:-.nada}:/tmp/snapshot.pgdump
       - ./load-snapshot.sh:/docker-entrypoint-initdb.d/load-snapshot.sh
       - erapg-data:/var/lib/postgresql/data/
+    command: postgres -c shared_buffers=512MB -c effective_cache_size=16GB
 
 volumes:
   eranode-data:
