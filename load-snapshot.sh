@@ -1,5 +1,5 @@
-#!/usr/bin/env sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
 if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by user
   export PGPASSWORD="${POSTGRES_PASSWORD}"
@@ -16,5 +16,10 @@ if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by us
     __list=""
   fi
 
-  pg_restore -v -d eranode ${__list} /tmp/snapshot.pgdump
+  __parallel=$(($(nproc)/2))
+  if [ "${__parallel}" -lt 2 ]; then
+    __parallel=2
+  fi
+
+  pg_restore -v -d eranode ${__list} -j ${__parallel} /tmp/snapshot.pgdump
 fi
