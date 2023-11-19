@@ -22,4 +22,5 @@ if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by us
   fi
 
   pg_restore -v -d eranode ${__list} -j ${__parallel} /tmp/snapshot.pgdump
+  psql -d eranode -c "GRANT ALL ON SCHEMA public TO mainnet2;"
 fi
