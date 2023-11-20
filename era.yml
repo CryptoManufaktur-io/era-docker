@@ -11,7 +11,7 @@ services:
     restart: "unless-stopped"
     image: matterlabs/external-node-public:${NODE_DOCKER_TAG}
     environment: # The node is configured entirely via ENV variables
-      - DATABASE_URL=postgres://mainnet2:postgres@postgres/eranode
+      - DATABASE_URL=postgres://postgres:postgres@postgres/eranode
       - DATABASE_POOL_SIZE=50
       - EN_STATE_CACHE_PATH=/db/state_keeper
       - EN_MERKLE_TREE_PATH=/db/lightweight
