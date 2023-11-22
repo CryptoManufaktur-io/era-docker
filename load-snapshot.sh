@@ -16,4 +16,5 @@ if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by us
   fi
 
   pg_restore -O -v --role ${POSTGRES_DB} -d ${POSTGRES_DB} ${__list} /tmp/snapshot.pgdump
+  psql -d ${POSTGRES_DB} -c "GRANT ALL ON SCHEMA public TO ${POSTGRES_DB};"
 fi
