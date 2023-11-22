@@ -691,7 +691,7 @@ version() {
 # Client versions
   case "${value}" in
     *era.yml* )
-      docompose exec zksync_external_node --version
+      docompose exec era-node zksync_external_node --version
       ;;&
   esac
 }
