@@ -4,6 +4,7 @@ set -euo pipefail
 if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by user
   export PGPASSWORD="${POSTGRES_PASSWORD}"
   export PGUSER="${POSTGRES_USER}"
+  psql -d postgres -c "CREATE ROLE ${POSTGRES_DB} LOGIN CREATEDB PASSWORD '$POSTGRES_PASSWORD';"
 
   if [ "${CALL_TRACES:-false}" = "false" ]; then
     echo "Restoring pgdump without call_traces table"
@@ -14,5 +15,5 @@ if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by us
     __list=""
   fi
 
-  pg_restore -C -O -v -d eranode ${__list} /tmp/snapshot.pgdump # This creates mainnet2 and restores into that
+  pg_restore -O -v --role ${POSTGRES_DB} -d ${POSTGRES_DB} ${__list} /tmp/snapshot.pgdump
 fi
