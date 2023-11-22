@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by user
+if [ -n "${PG_SNAPSHOT}" ]; then
   export PGPASSWORD="${POSTGRES_PASSWORD}"
   export PGUSER="${POSTGRES_USER}"
+
+  echo "Downloading snapshot file"
+  aria2c -c -x6 -s6 --auto-file-renaming=false --conditional-get=true --allow-overwrite=true -d /tmp \
+    -o snapshot.pgdump "${PG_SNAPSHOT}"
 
   if [ "${CALL_TRACES:-false}" = "false" ]; then
     echo "Restoring pgdump without call_traces table"
@@ -15,4 +19,7 @@ if [ -f /tmp/snapshot.pgdump ]; then # Not a directory and so was supplied by us
   fi
 
   pg_restore -O -v -d ${POSTGRES_DB} ${__list} /tmp/snapshot.pgdump
+
+  echo "Removing snapshot file"
+  rm -f /tmp/snapshot.pgdump
 fi

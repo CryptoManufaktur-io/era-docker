@@ -78,19 +78,26 @@ services:
 
   postgres:
     restart: "unless-stopped"
-    image: "postgres:${PG_DOCKER_TAG}"
+    build:
+      context: ./
+      dockerfile: Dockerfile.postgres
+      args:
+        - DOCKER_TAG=${PG_DOCKER_TAG:-16-bookworm}
+    stop_grace_period: 5m
+    image: postgres:local
+    pull_policy: build
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=eranode
       - CALL_TRACES=${CALL_TRACES:-false}
+      - PG_SNAPSHOT=${PG_SNAPSHOT:-}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       start_period: 5s
       interval: 10s
       timeout: 5s
     volumes:
-      - ${PG_SNAPSHOT:-.nada}:/tmp/snapshot.pgdump:ro
       - ./load-snapshot.sh:/docker-entrypoint-initdb.d/load-snapshot.sh
       - erapg-data:/var/lib/postgresql/data/
     command: postgres -c shared_buffers=512MB -c effective_cache_size=16GB
