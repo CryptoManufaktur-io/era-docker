@@ -9,7 +9,7 @@ x-logging: &logging
 services:
   era-node:
     restart: "unless-stopped"
-    image: matterlabs/external-node-public:${NODE_DOCKER_TAG}
+    image: matterlabs/external-node:${NODE_DOCKER_TAG}
     environment: # The node is configured entirely via ENV variables
       - DATABASE_URL=postgres://postgres:postgres@postgres/mainnet2
       - DATABASE_POOL_SIZE=50
