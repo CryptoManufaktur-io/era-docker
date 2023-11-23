@@ -10,6 +10,7 @@ services:
   era-node:
     restart: "unless-stopped"
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
+    stop_grace_period: 1m
     environment: # The node is configured entirely via ENV variables
       - DATABASE_URL=postgres://postgres:postgres@postgres/eranode
       - DATABASE_POOL_SIZE=50
@@ -83,7 +84,7 @@ services:
       dockerfile: Dockerfile.postgres
       args:
         - DOCKER_TAG=${PG_DOCKER_TAG:-16-bookworm}
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     image: postgres:local
     pull_policy: build
     environment:
