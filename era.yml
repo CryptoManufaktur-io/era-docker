@@ -48,9 +48,9 @@ services:
     volumes:
       - eranode-data:/db
       - /etc/localtime:/etc/localtime:ro
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
     <<: *logging
     labels:
       - traefik.enable=true
