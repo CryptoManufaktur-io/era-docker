@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 __project_name="Era Docker"
-__app_name="ZKSync Era node"
+__app_name="zkSync Era node"
 __sample_service="era-node"
 __docker_exe="docker"
 __compose_exe="docker compose"

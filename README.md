@@ -1,6 +1,6 @@
 # Overview
 
-Docker Compose for ZKSync Era RPC "external" node.
+Docker Compose for zkSync Era RPC "external" node.
 
 `cp default.env .env`, then `nano .env` and adjust values, including `PG_SNAPSHOT` if desired/required. `PG_SNAPSHOT`
 should be a URL and will be downloaded.
@@ -27,7 +27,7 @@ To update the software, run `./erad update` and then `./erad up`
 
 ## Hardware
 
-5+ TB SSD to load the initial snapshot. The PostgreSQL DB without call_traces is ~ 2.3 TiB as of Nov 2023.
+5+ TB SSD to load the initial snapshot. The PostgreSQL DB without `call_traces` is ~ 2.3 TiB as of Nov 2023.
 A conservative deployment would use a 7.6 TB drive to allow for future growth, for both the databases and the snapshot
 in case of resync.
 
