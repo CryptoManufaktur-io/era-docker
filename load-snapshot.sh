@@ -18,7 +18,12 @@ if [ -n "${PG_SNAPSHOT}" ]; then
     __list=""
   fi
 
-  pg_restore -O -v -d ${POSTGRES_DB} ${__list} /tmp/snapshot.pgdump
+  __parallel=$(($(nproc)/2))
+  if [ "${__parallel}" -lt 2 ]; then
+    __parallel=2
+  fi
+
+  pg_restore -O -v -j ${__parallel} -d ${POSTGRES_DB} ${__list} /tmp/snapshot.pgdump
 
   echo "Removing snapshot file"
   rm -f /tmp/snapshot.pgdump
