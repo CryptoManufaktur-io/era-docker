@@ -27,10 +27,13 @@ To update the software, run `./erad update` and then `./erad up`
 
 ## Hardware
 
-5+ TB SSD to load the initial snapshot. The PostgreSQL DB without `call_traces` is ~ 2.3 TiB as of Nov 2023.
-A conservative deployment would use a 7.6 TB drive to allow for future growth, for both the databases and the snapshot
-in case of resync.
+5+ TB SSD to load the initial snapshot. The PostgreSQL DB without `call_traces` is ~ 2.3 TiB as of Nov 2023, and
+the zkSync Era node RocksDB takes less than 2 TiB.
 
-N cores and N GiB RAM, tbd. The official 32 cores 64 GiB RAM are likely oversized, by a lot.
+A conservative deployment would use a 7.6 TB / 7 TiB drive to allow for future growth and to allow for in-place
+PostgreSQL version updates, which requires as much space again as PostgreSQL is taking up.
+
+Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB RAM with zkSync Era node and
+PostgreSQL, and up to 4 cores. Steady state takes N GiB RAM and N2 cores.
 
 This is Era Docker v1.0.0
