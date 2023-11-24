@@ -2,7 +2,7 @@
 
 Docker Compose for zkSync Era RPC "external" node.
 
-`cp default.env .env`, then `nano .env` and adjust values, including `PG_SNAPSHOT` if desired/required. `PG_SNAPSHOT`
+`cp default.env .env`, then `nano .env` and adjust values, including `NODE_DOCKER_TAG` and `PG_SNAPSHOT`. `PG_SNAPSHOT`
 should be a URL and will be downloaded.
 
 Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik
