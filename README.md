@@ -39,4 +39,9 @@ Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB 
 PostgreSQL, and up to 4 cores. Steady state takes ~ 37 GiB RAM and ~ 1/5th of a core when 64 GiB are available.
 On a 32 GiB machine, era-node stayed under 14 GiB RAM total.
 
+## Version
+
+Era Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
+third digit bugfixes.
+
 This is Era Docker v1.0.0
