@@ -1,4 +1,4 @@
 ARG DOCKER_TAG
 FROM postgres:${DOCKER_TAG}
 
-RUN apt-get update && apt-get install -y aria2
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y aria2
