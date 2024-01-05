@@ -120,7 +120,7 @@ upgrade_compose() {
   if [[ "$__distro" = "ubuntu" ]]; then
     if [ "${__os_major_version}" -lt 20 ]; then
       echo "${__project_name} cannot update Docker Compose on Ubuntu ${__os_major_version}."
-      echo "Consider upgrading to 20.04 and then 22.04."
+      echo "Consider upgrading to 20.04, then 22.04 and then 24.04."
       exit 1
     fi
     if dpkg-query -W -f='${Status}' docker.io 2>/dev/null | grep -q "ok installed"; then
@@ -137,9 +137,9 @@ upgrade_compose() {
     __compose_upgraded=1
   elif [[ "$__distro" =~ "debian" ]]; then
     ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get -y install ca-certificates curl gnupg
-    if [ "${__os_major_version}" -lt 10 ]; then
+    if [ "${__os_major_version}" -lt 11 ]; then
       echo "${__project_name} cannot update Docker Compose on Debian ${__os_major_version}."
-      echo "Consider upgrading to 10, then 11 and then 12."
+      echo "Consider upgrading to 11 and then 12."
       exit 1
     fi
     if dpkg-query -W -f='${Status}' docker.io 2>/dev/null | grep -q "ok installed"; then
@@ -294,7 +294,7 @@ nag_os_version() {
   if [[ "$__distro" =~ "debian" ]]; then
     if [ "${__os_major_version}" -lt 11 ]; then
       echo
-      echo "Debian ${__os_major_version} is older than the recommended 11 or 12 version."
+      echo "Debian ${__os_major_version} is older than the recommended 12 or 11 version."
       echo
     fi
   fi
