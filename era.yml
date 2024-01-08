@@ -19,7 +19,8 @@ services:
       - EN_ETH_CLIENT_URL=${L1_RPC}
       - EN_HTTP_PORT=${RPC_PORT:-3060}
       - EN_WS_PORT=${WS_PORT:-3061}
-      - EN_PROMETHEUS_PORT=${METRICS_PORT:-}
+# Comment this out if not collecting metrics, to avoid memory leak
+      - EN_PROMETHEUS_PORT=${METRICS_PORT:-3322}
       - EN_HEALTHCHECK_PORT=3081
       - EN_REQ_ENTITIES_LIMIT=10000
       - EN_FILTERS_LIMIT=10000
