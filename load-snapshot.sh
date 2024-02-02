@@ -27,4 +27,8 @@ if [ -n "${PG_SNAPSHOT}" ]; then
 
   echo "Removing snapshot file"
   rm -f /tmp/snapshot.pgdump
+
+  if [ "${CALL_TRACES:-false}" = "false" ]; then # create an empty table so migrations work
+    psql -d ${POSTGRES_DB} -c "CREATE TABLE call_traces (tx_hash bytea not null primary key references transactions on delete cascade, call_trace bytea not null);"
+  fi
 fi
