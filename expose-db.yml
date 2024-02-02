@@ -1,0 +1,5 @@
+# To be used with era.yml to expose db
+services:
+  postgres:
+    ports:
+      - 5432:5432
