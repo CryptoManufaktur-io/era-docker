@@ -44,4 +44,4 @@ On a 32 GiB machine, era-node stayed under 14 GiB RAM total.
 Era Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
 third digit bugfixes.
 
-This is Era Docker v1.2.0
+This is Era Docker v2.0.0
