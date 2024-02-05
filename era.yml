@@ -17,6 +17,12 @@ services:
       - EN_STATE_CACHE_PATH=/db/state_keeper
       - EN_MERKLE_TREE_PATH=/db/lightweight
       - EN_ETH_CLIENT_URL=${L1_RPC}
+      - EN_MAIN_NODE_URL=${MAIN_NODE_URL}
+      - EN_L2_CHAIN_ID=${L2_CHAIN_ID}
+      - EN_L1_CHAIN_ID=${L1_CHAIN_ID}
+      - EN_L1_TO_L2_TRANSACTIONS_COMPATIBILITY_MODE=false
+      - EN_BOOTLOADER_HASH=0x010007794e73f682ad6d27e86b6f71bbee875fc26f5708d1713e7cfd476098d3
+      - EN_DEFAULT_AA_HASH=0x0100067d861e2f5717a12c3e869cfb657793b86bbb0caa05cc1421f16c5217bc
       - EN_HTTP_PORT=${RPC_PORT:-3060}
       - EN_WS_PORT=${WS_PORT:-3061}
 # Comment this out if not collecting metrics, to avoid memory leak
@@ -41,11 +47,6 @@ services:
       - RUST_LOG=${RUST_LOG}
       - RUST_BACKTRACE=full
       - RUST_LIB_BACKTRACE=1
-      - EN_MAIN_NODE_URL=${MAIN_NODE_URL}
-      - EN_L2_CHAIN_ID=${L2_CHAIN_ID}
-      - EN_L1_CHAIN_ID=${L1_CHAIN_ID}
-      - EN_BOOTLOADER_HASH=0x010007794e73f682ad6d27e86b6f71bbee875fc26f5708d1713e7cfd476098d3
-      - EN_DEFAULT_AA_HASH=0x0100067d861e2f5717a12c3e869cfb657793b86bbb0caa05cc1421f16c5217bc
       - ZKSYNC_HOME=/
     volumes:
       - eranode-data:/db
