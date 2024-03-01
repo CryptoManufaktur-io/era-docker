@@ -5,6 +5,8 @@ Docker Compose for zkSync Era RPC "external" node.
 `cp default.env .env`, then `nano .env` and adjust values, including `NODE_DOCKER_TAG` and `PG_SNAPSHOT`. `PG_SNAPSHOT`
 should be a URL and will be downloaded.
 
+This repo supports splitting PostgreSQL and era node to two different machines, see `SQL_NODE`.
+
 Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik
 and Prometheus remote write; use `:ext-network.yml` in `COMPOSE_FILE` inside `.env` in that case.
 
@@ -29,10 +31,10 @@ To update the software, run `./erad update` and then `./erad up`
 
 ## Hardware
 
-5+ TB SSD to load the initial snapshot. The PostgreSQL DB without `call_traces` is ~ 2.3 TiB as of Nov 2023, and
-the RocksDB takes ~ 1.5 TiB.
+10+ TB SSD to load the initial snapshot. The PostgreSQL DB without `call_traces` is ~ 4 TiB as of Mar 2024, and
+the RocksDB takes ~ 2.4 TiB.
 
-A conservative deployment would use a 7.6 TB / 7 TiB drive to allow for future growth and to allow for in-place
+A conservative deployment would use a 14 TiB drive to allow for future growth and to allow for in-place
 PostgreSQL version updates, which requires as much space again as PostgreSQL is taking up.
 
 Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB RAM with zkSync Era node and
@@ -44,4 +46,4 @@ On a 32 GiB machine, era-node stayed under 14 GiB RAM total.
 Era Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
 third digit bugfixes.
 
-This is Era Docker v2.0.0
+This is Era Docker v3.0.0

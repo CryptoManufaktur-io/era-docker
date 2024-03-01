@@ -2,5 +2,5 @@
 services:
   era-node:
     ports:
-      - ${RPC_PORT:-3060}:${RPC_PORT:-3060}/tcp
-      - ${WS_PORT:-3061}:${WS_PORT:-3061}/tcp
+      - ${SHARE_IP}:${RPC_PORT:-3060}:${RPC_PORT:-3060}/tcp
+      - ${SHARE_IP}:${WS_PORT:-3061}:${WS_PORT:-3061}/tcp

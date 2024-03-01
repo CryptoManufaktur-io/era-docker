@@ -12,7 +12,7 @@ services:
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
     stop_grace_period: 1m
     environment: # The node is configured entirely via ENV variables
-      - DATABASE_URL=postgres://postgres:postgres@postgres/eranode
+      - DATABASE_URL=postgres://postgres:postgres@${SQL_NODE}/eranode
       - DATABASE_POOL_SIZE=50
       - EN_STATE_CACHE_PATH=/db/state_keeper
       - EN_MERKLE_TREE_PATH=/db/lightweight
@@ -79,32 +79,5 @@ services:
       - metrics.path=/metrics
       - metrics.port=${METRICS_PORT:-}
 
-  postgres:
-    restart: "unless-stopped"
-    build:
-      context: ./
-      dockerfile: Dockerfile.postgres
-      args:
-        - DOCKER_TAG=${PG_DOCKER_TAG:-16-bookworm}
-    stop_grace_period: 1m
-    image: postgres:local
-    pull_policy: build
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=eranode
-      - CALL_TRACES=${CALL_TRACES:-false}
-      - PG_SNAPSHOT=${PG_SNAPSHOT:-}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      start_period: 5s
-      interval: 10s
-      timeout: 5s
-    volumes:
-      - ./load-snapshot.sh:/docker-entrypoint-initdb.d/load-snapshot.sh
-      - erapg-data:/var/lib/postgresql/data/
-    command: postgres -c shared_buffers=512MB -c effective_cache_size=16GB
-
 volumes:
   eranode-data:
-  erapg-data:

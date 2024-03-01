@@ -1,5 +1,5 @@
-# To be used with era.yml to expose db
+# To be used with sql.yml to expose db
 services:
   postgres:
     ports:
-      - 5432:5432
+      - ${SHARE_IP}:5432:5432
