@@ -39,7 +39,8 @@ PostgreSQL version updates, which requires as much space again as PostgreSQL is 
 
 Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB RAM with zkSync Era node and
 PostgreSQL, and up to 4 cores. Steady state takes ~ 37 GiB RAM and ~ 1/5th of a core when 64 GiB are available.
-On a 32 GiB machine, era-node stayed under 14 GiB RAM total.
+
+When using a separate machine for PostgreSQL, 32 GiB RAM, 4 or 6 cores and 14 TiB+ NVMe work well.
 
 ## Split deployment
 
