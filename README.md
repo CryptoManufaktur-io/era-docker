@@ -41,6 +41,18 @@ Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB 
 PostgreSQL, and up to 4 cores. Steady state takes ~ 37 GiB RAM and ~ 1/5th of a core when 64 GiB are available.
 On a 32 GiB machine, era-node stayed under 14 GiB RAM total.
 
+## Split deployment
+
+The era node and PostgreSQL can be run on separate machines. Ideally, they can communicate over a private network.
+
+On the one using `era.yml`, adjust the `SQL_NODE` variable to the IP of the PostgreSQL server.
+
+One the using `psql.yml:psql-shared.yml`, adjust `PG_PARAMS` for better performance and set `SHARE_IP` to the IP
+of the interface on the private network.
+
+If you don't have a private network, [place ufw in front of Docker](https://eth-docker.net/Support/Cloud) and allow
+tcp 5432 from the trusted IP of the era node, disallow all other access to tcp 5432.
+
 ## Version
 
 Era Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
