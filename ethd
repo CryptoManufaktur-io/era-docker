@@ -720,6 +720,8 @@ version() {
     *era.yml* )
       echo "NODE_DOCKER_TAG: $(grep -E '^NODE_DOCKER_TAG=' .env | cut -d '=' -f2)"
       docompose exec era-node zksync_external_node --version
+      ;;&
+    *psql.yml* )
       echo
       docompose exec postgres pg_config --version
       ;;&
