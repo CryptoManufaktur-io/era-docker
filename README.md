@@ -46,10 +46,10 @@ When using a separate machine for PostgreSQL, 32 GiB RAM, 4 or 6 cores and 14 Ti
 
 The era node and PostgreSQL can be run on separate machines. Ideally, they can communicate over a private network.
 
-On the one using `era.yml`, adjust the `SQL_NODE` variable to the IP of the PostgreSQL server.
+On the one running the era node with `era.yml`, adjust the `SQL_NODE` variable to the IP of the PostgreSQL server.
 
-One the using `psql.yml:psql-shared.yml`, adjust `PG_PARAMS` for better performance and set `SHARE_IP` to the IP
-of the interface on the private network.
+On the one running PostgreSQL with `psql.yml:psql-shared.yml`, adjust `PG_PARAMS` for better performance and set
+`SHARE_IP` to the IP of the interface on the private network.
 
 If you don't have a private network, [place ufw in front of Docker](https://eth-docker.net/Support/Cloud) and allow
 tcp 5432 from the trusted IP of the era node, disallow all other access to tcp 5432.
