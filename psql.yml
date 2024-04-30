@@ -16,7 +16,7 @@ services:
         - DOCKER_TAG=${PG_DOCKER_TAG:-16-bookworm}
     stop_grace_period: 1m
     image: postgres:local
-    pull_policy: build
+    pull_policy: never
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
