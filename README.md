@@ -1,6 +1,6 @@
 # Overview
 
-Docker Compose for zkSync Era RPC "external" node.
+Docker Compose for ZKsync Era RPC "external" node.
 
 `cp default.env .env`, then `nano .env` and adjust values, including `NODE_DOCKER_TAG` and `PG_SNAPSHOT`. `PG_SNAPSHOT`
 should be a URL and will be downloaded.
@@ -37,7 +37,7 @@ the RocksDB takes ~ 2.4 TiB.
 A conservative deployment would use a 14 TiB drive to allow for future growth and to allow for in-place
 PostgreSQL version updates, which requires as much space again as PostgreSQL is taking up.
 
-Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB RAM with zkSync Era node and
+Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB RAM with ZKsync Era node and
 PostgreSQL, and up to 4 cores. Steady state takes ~ 37 GiB RAM and ~ 1/5th of a core when 64 GiB are available.
 
 When using a separate machine for PostgreSQL, 32 GiB RAM, 4 or 6 cores and 14 TiB+ NVMe work well.
