@@ -31,11 +31,16 @@ To update the software, run `./erad update` and then `./erad up`
 
 ## Hardware
 
-10+ TB SSD to load the initial snapshot. The PostgreSQL DB without `call_traces` is ~ 4 TiB as of Mar 2024, and
-the RocksDB takes ~ 2.4 TiB.
+Seriously consider splitting the era node (RocksDB) and the PostgreSQL server, if you have a limit to your
+storage.
 
-A conservative deployment would use a 14 TiB drive to allow for future growth and to allow for in-place
-PostgreSQL version updates, which requires as much space again as PostgreSQL is taking up.
+Storage use climbs by a little less than 1 TB/month. Pruning is not yet available as of `24.6.0`, and is being worked
+on.
+
+March 2024: RocksDB ~2.4 TiB, PostgreSQL without `call_traces` ~4 TiB.
+June 20th 2024: RocksDB 3.2 TB (~3 TiB), PostgreSQL without `call_traces` 5.8 TB, ~5.4 TiB.
+
+Keep in mind the initial snapshot load will require roughly twice the space of the DB.
 
 Provision 6 or 8 cores and 64 GiB RAM. Initial snapshot load takes up to 60 GiB RAM with ZKsync Era node and
 PostgreSQL, and up to 4 cores. Steady state takes ~ 37 GiB RAM and ~ 1/5th of a core when 64 GiB are available.
