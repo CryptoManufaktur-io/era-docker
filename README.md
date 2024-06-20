@@ -37,7 +37,7 @@ storage.
 Storage use climbs by a little less than 1 TB/month. Pruning is not yet available as of `24.6.0`, and is being worked
 on.
 
-March 2024: RocksDB ~2.4 TiB, PostgreSQL without `call_traces` ~4 TiB.
+March 2024: RocksDB ~2.4 TiB, PostgreSQL without `call_traces` ~4 TiB.  
 June 20th 2024: RocksDB 3.2 TB (~3 TiB), PostgreSQL without `call_traces` 5.8 TB, ~5.4 TiB.
 
 Keep in mind the initial snapshot load will require roughly twice the space of the DB.
