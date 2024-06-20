@@ -76,6 +76,7 @@ services:
       - metrics.scrape=true
       - metrics.path=/metrics
       - metrics.port=${METRICS_PORT:-}
+      - metrics.network=era-l2-${L2_CHAIN_ID}-l1-${L1_CHAIN_ID}
 
 volumes:
   eranode-data:
