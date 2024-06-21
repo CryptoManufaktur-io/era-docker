@@ -11,6 +11,7 @@ services:
     restart: "unless-stopped"
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
     stop_grace_period: 5m
+    stop_signal: SIGINT
     environment: # The node is configured entirely via ENV variables
       - EN_SNAPSHOTS_RECOVERY_ENABLED=true
       - EN_SNAPSHOTS_OBJECT_STORE_BUCKET_BASE_URL=zksync-era-mainnet-external-node-snapshots
