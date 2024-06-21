@@ -12,6 +12,11 @@ services:
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
     stop_grace_period: 1m
     environment: # The node is configured entirely via ENV variables
+      - EN_SNAPSHOTS_RECOVERY_ENABLED=true
+      - EN_SNAPSHOTS_OBJECT_STORE_BUCKET_BASE_URL=zksync-era-mainnet-external-node-snapshots
+      - EN_SNAPSHOTS_OBJECT_STORE_MODE=GCSAnonymousReadOnly
+      - EN_PRUNING_ENABLED=${PRUNING}
+      - EN_PRUNING_DATA_RETENTION_SEC=${PRUNING_RETENTION}
       - DATABASE_URL=postgres://postgres:postgres@${SQL_NODE}/eranode
       - DATABASE_POOL_SIZE=50
       - EN_STATE_CACHE_PATH=/db/state_keeper
