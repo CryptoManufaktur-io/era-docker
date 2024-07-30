@@ -76,4 +76,4 @@ tcp 5432 from the trusted IP of the era node, disallow all other access to tcp 5
 Era Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
 third digit bugfixes.
 
-This is Era Docker v3.1.0
+This is Era Docker v4.0.0

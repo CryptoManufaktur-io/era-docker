@@ -7,11 +7,35 @@ x-logging: &logging
       tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
 
 services:
+  era-init:
+    restart: "no"
+    image: matterlabs/external-node:${NODE_DOCKER_TAG}
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        if [ ! -f /config/secrets.yaml ]; then
+          echo "Generating config/secrets.yaml"
+          /usr/bin/zksync_external_node generate-secrets >/config/secrets.yaml
+          chmod 600 /config/secrets.yaml
+        fi
+        if [ ! -f /config/config.yaml ]; then
+          apt-get update && apt-get install -y --no-install-recommends curl
+          echo "Creating config/config.yaml"
+          cp /config/config-sample.yaml /config/config.yaml
+          sed -i "s/x\.x\.x\.x/$$(curl -s -4 https://ifconfig.me/ip)/g" /config/config.yaml
+        fi
+
   era-node:
     restart: "unless-stopped"
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
     stop_grace_period: 5m
     stop_signal: SIGINT
+    depends_on:
+      era-init:
+        condition: service_completed_successfully
     environment: # The node is configured entirely via ENV variables
       - EN_SNAPSHOTS_RECOVERY_ENABLED=true
       - EN_SNAPSHOTS_OBJECT_STORE_BUCKET_BASE_URL=zksync-era-mainnet-external-node-snapshots
@@ -46,6 +70,8 @@ services:
       - EN_MAX_TX_SIZE=1000000
       - EN_MAX_RESPONSE_BODY_SIZE_MB=100
       - EN_API_NAMESPACES=${API_NAMESPACES}
+      - EN_CONSENSUS_CONFIG_PATH=/config/config.yaml
+      - EN_CONSENSUS_SECRETS_PATH=/config/secrets.yaml
       - MISC_LOG_FORMAT=plain
       - MISC_SENTRY_URL=unset
       - MISC_SENTRY_PANIC_INTERVAL=1800
@@ -55,8 +81,11 @@ services:
       - RUST_BACKTRACE=full
       - RUST_LIB_BACKTRACE=1
       - ZKSYNC_HOME=/
+    ports:
+      - 3054:3054/tcp
     volumes:
       - eranode-data:/db
+      - ./config:/config
       - /etc/localtime:/etc/localtime:ro
     <<: *logging
     labels:

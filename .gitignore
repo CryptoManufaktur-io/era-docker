@@ -3,3 +3,5 @@
 *.pgdump
 *.aria2
 .nada
+config/config.yaml
+config/secrets.yaml
