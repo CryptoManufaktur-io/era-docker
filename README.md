@@ -42,10 +42,11 @@ To update the software, run `./erad update` and then `./erad up`
 Seriously consider splitting the era node (RocksDB) and the PostgreSQL server, if you have a limit to your
 storage.
 
-Storage use climbs by around 700 GB/month.
+Storage use climbs by around 350 GiB/month.
 
 March 2024: RocksDB ~2.4 TiB, PostgreSQL without `call_traces` ~4 TiB.  
 June 20th 2024: RocksDB 3.2 TB (~3 TiB), PostgreSQL without `call_traces` 5.8 TB, ~5.4 TiB.
+Nov 14th 2024: RocksDB 3.5TB (~3.3 TiB), PostgreSQL without `call_traces` 6.3 TB, ~5.9 TiB
 
 The storage requirements depend on whether the node is configured to prune, and are roughly:
 
