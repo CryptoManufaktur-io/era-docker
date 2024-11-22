@@ -1,0 +1,63 @@
+# zkLink is just different enough from Era that a separate yml makes sense
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
+services:
+  era-node:
+    restart: "unless-stopped"
+    image: zklinkprotocol/nova-external-node:${NODE_DOCKER_TAG}
+    stop_grace_period: 5m
+    stop_signal: SIGINT
+    command: --enable-snapshots-recovery
+    environment: # The node is configured entirely via ENV variables
+      - DATABASE_URL=postgres://postgres:postgres@${SQL_NODE}/eranode
+      - DATABASE_POOL_SIZE=10
+      - EN_STATE_CACHE_PATH=/db/state_keeper
+      - EN_MERKLE_TREE_PATH=/db/lightweight
+      - EN_ETH_CLIENT_URL=${L1_RPC}
+      - EN_MAIN_NODE_URL=${MAIN_NODE_URL}
+      - EN_L2_CHAIN_ID=${L2_CHAIN_ID}
+      - EN_L1_CHAIN_ID=${L1_CHAIN_ID}
+      - EN_HTTP_PORT=${RPC_PORT:-3060}
+      - EN_WS_PORT=${WS_PORT:-3061}
+# Comment this out if not collecting metrics, to avoid memory leak
+      - EN_PROMETHEUS_PORT=${METRICS_PORT:-3322}
+      - EN_HEALTHCHECK_PORT=3081
+      - EN_API_NAMESPACES=${API_NAMESPACES}
+      - RUST_LOG=${RUST_LOG}
+    volumes:
+      - zklink-data:/db
+      - /etc/localtime:/etc/localtime:ro
+    <<: *logging
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${RPC_HOST:-zklink}.service=${RPC_HOST:-zklink}
+      - traefik.http.routers.${RPC_HOST:-zklink}.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-zklink}.rule=Host(`${RPC_HOST:-zklink}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-zklink}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${RPC_HOST:-zklink}lb.service=${RPC_HOST:-zklink}
+      - traefik.http.routers.${RPC_HOST:-zklink}lb.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-zklink}lb.rule=Host(`${RPC_LB:-zklink-lb}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-zklink}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${RPC_HOST:-zklink}.loadbalancer.server.port=${RPC_PORT:-3060}
+      - traefik.http.routers.${WS_HOST:-zklinkws}.service=${WS_HOST:-zklinkws}
+      - traefik.http.routers.${WS_HOST:-zklinkws}.entrypoints=websecure
+      - traefik.http.routers.${WS_HOST:-zklinkws}.rule=Host(`${WS_HOST:-zklinkws}.${DOMAIN}`)
+      - traefik.http.routers.${WS_HOST:-zklinkws}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${WS_HOST:-zklinkws}lb.service=${WS_HOST:-zklinkws}
+      - traefik.http.routers.${WS_HOST:-zklinkws}lb.entrypoints=websecure
+      - traefik.http.routers.${WS_HOST:-zklinkws}lb.rule=Host(`${WS_LB:-zklinkws-lb}.${DOMAIN}`)
+      - traefik.http.routers.${WS_HOST:-zklinkws}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${WS_HOST:-zklinkws}.loadbalancer.server.port=${WS_PORT:-3061}
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=${METRICS_PORT:-}
+      - metrics.network=zklink-l2-${L2_CHAIN_ID}-l1-${L1_CHAIN_ID}
+
+volumes:
+  zklink-data:
