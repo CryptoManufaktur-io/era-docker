@@ -973,6 +973,7 @@ help() {
 __env_file=.env
 __during_update=0
 __during_migrate=0
+__during_postgres=0
 __migrated=0
 __command=""
 __me="./$(basename "${BASH_SOURCE[0]}")"
