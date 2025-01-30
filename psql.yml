@@ -32,6 +32,10 @@ services:
       - ./load-snapshot.sh:/docker-entrypoint-initdb.d/load-snapshot.sh
       - erapg-data:/var/lib/postgresql/data/
     command: postgres ${PG_PARAMS}
+    networks:
+      default:
+        aliases:
+          - ${SQL_NODE}
 
 volumes:
   eranode-data:

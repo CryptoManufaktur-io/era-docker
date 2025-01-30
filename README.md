@@ -4,7 +4,7 @@ Docker Compose for ZKsync Era RPC "external"/zklink/treasure node.
 
 This repo supports mainnet only. It would need to be adjusted for testnet.
 
-`cp default.env .env`, then `nano .env` and adjust values, including `NODE_DOCKER_TAG` and `PG_SNAPSHOT`. `PG_SNAPSHOT`
+`cp default.env .env`, then `nano .env` and adjust values, including `NODE_DOCKER_TAG`, `SQL_NODE` and `PG_SNAPSHOT`. `PG_SNAPSHOT`
 should be a URL and will be downloaded.
 
 If `PG_SNAPSHOT` is omitted, the node will sync from a network snapshot. This is fast and takes very little storage,
@@ -13,7 +13,8 @@ but does not have any historical data.
 If `PRUNING` is set to `true`, the node will keep data only for `PRUNING_RETENTION` seconds. This means it won't
 have historical data past that point.
 
-This repo supports splitting PostgreSQL and era node to two different machines, see `SQL_NODE`.
+This repo supports splitting PostgreSQL and era node to two different machines, see `SQL_NODE`. 
+### Note its important to use a unique value for SQL_NODE even if running on single machine to allow running multiple versions of the repo on same machine.
 
 Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik
 and Prometheus remote write; use `:ext-network.yml` in `COMPOSE_FILE` inside `.env` in that case.
@@ -60,7 +61,7 @@ PostgreSQL, and up to 4 cores. Steady state takes ~ 37 GiB RAM and ~ 1/5th of a 
 
 When using a separate machine for PostgreSQL, 32 GiB RAM, 4 or 6 cores and 14 TiB+ NVMe work well.
 
-## Split deployment
+## Split deployment `SQL_NODE`
 
 The era node and PostgreSQL can be run on separate machines. Ideally, they can communicate over a private network.
 
