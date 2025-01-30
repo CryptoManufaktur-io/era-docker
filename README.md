@@ -1,6 +1,6 @@
 # Overview
 
-Docker Compose for ZKsync Era RPC "external" node.
+Docker Compose for ZKsync Era RPC "external"/zklink/treasure node.
 
 This repo supports mainnet only. It would need to be adjusted for testnet.
 
@@ -71,6 +71,9 @@ On the one running PostgreSQL with `psql.yml:psql-shared.yml`, adjust `PG_PARAMS
 
 If you don't have a private network, [place ufw in front of Docker](https://eth-docker.net/Support/Cloud) and allow
 tcp 5432 from the trusted IP of the era node, disallow all other access to tcp 5432.
+
+## zklink and treasure
+Both of this are very similar to era external node but different enough to require their own yaml files. Use `zklink.yml` and `treasure.yml` for zklink and treasure respectively in place of `era.yml`.
 
 ## Version
 
