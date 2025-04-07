@@ -45,13 +45,15 @@ upgrade-postgres() {
     return 0
   fi
 
-  __target_pg=17
+  __var="PG_UPGRADE_TAG"
+  __get_value_from_env "${__var}" "${__env_file}" "__target_pg"
   __during_postgres=1
   __during_update=1
 
   __source_pg="$(__dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
     alpine:3 cat /var/lib/postgresql/data/PG_VERSION)"
 
+# shellcheck disable=SC2154
   if [ "${__source_pg}" -lt "${__target_pg}" ]; then
     echo "Era is using PostgreSQL ${__source_pg}. The current version is PostgreSQL ${__target_pg}."
     echo
