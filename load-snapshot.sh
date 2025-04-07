@@ -23,12 +23,13 @@ if [ -n "${PG_SNAPSHOT}" ]; then
     __parallel=2
   fi
 
-  pg_restore -O -v -j ${__parallel} -d ${POSTGRES_DB} ${__list} /tmp/snapshot.pgdump
+# shellcheck disable=SC2086
+  pg_restore -O -v -j ${__parallel} -d "${POSTGRES_DB}" ${__list} /tmp/snapshot.pgdump
 
   echo "Removing snapshot file"
   rm -f /tmp/snapshot.pgdump
 
   if [ "${CALL_TRACES:-false}" = "false" ]; then # create an empty table so migrations work
-    psql -d ${POSTGRES_DB} -c "CREATE TABLE call_traces (tx_hash bytea not null primary key references transactions on delete cascade, call_trace bytea not null);"
+    psql -d "${POSTGRES_DB}" -c "CREATE TABLE call_traces (tx_hash bytea not null primary key references transactions on delete cascade, call_trace bytea not null);"
   fi
 fi

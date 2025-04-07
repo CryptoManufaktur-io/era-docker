@@ -1,5 +1,8 @@
 .env*
 *.swp
+*.bak
+*.original
+custom.yml
 *.pgdump
 *.aria2
 .nada

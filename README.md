@@ -13,7 +13,7 @@ but does not have any historical data.
 If `PRUNING` is set to `true`, the node will keep data only for `PRUNING_RETENTION` seconds. This means it won't
 have historical data past that point.
 
-This repo supports splitting PostgreSQL and era node to two different machines, see `SQL_NODE`. 
+This repo supports splitting PostgreSQL and era node to two different machines, see `SQL_NODE`.
 ### Note its important to use a unique value for SQL_NODE even if running on single machine to allow running multiple versions of the repo on same machine.
 
 Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik
@@ -45,7 +45,7 @@ storage.
 
 Storage use climbs by around 350 GiB/month.
 
-March 2024: RocksDB ~2.4 TiB, PostgreSQL without `call_traces` ~4 TiB.  
+March 2024: RocksDB ~2.4 TiB, PostgreSQL without `call_traces` ~4 TiB.
 June 20th 2024: RocksDB 3.2 TB (~3 TiB), PostgreSQL without `call_traces` 5.8 TB, ~5.4 TiB.
 Nov 14th 2024: RocksDB 3.5TB (~3.3 TiB), PostgreSQL without `call_traces` 6.3 TB, ~5.9 TiB
 
