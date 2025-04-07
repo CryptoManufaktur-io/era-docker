@@ -30,10 +30,6 @@ version() {
 
 
 __prep_conffiles() {
-# Create ext-network.yml if it doesn't exist
-  if [ ! -f "ext-network.yml" ]; then
-    ${__as_owner} cp ext-network.yml.sample ext-network.yml
-  fi
   return
 }
 
