@@ -113,7 +113,7 @@ upgrade-postgres() {
   __dodocker pull "pgautoupgrade/pgautoupgrade:${__target_pg}-bookworm"
   __during_migrate=1
   __dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
-   -e PGAUTO_ONESHOT=yes -e POSTGRES_PASSWORD=postgres \
+   -e PGAUTO_ONESHOT=yes -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres \
    "pgautoupgrade/pgautoupgrade:${__target_pg}-bookworm"
 
   __migrated=1
