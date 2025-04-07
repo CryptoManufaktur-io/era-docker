@@ -17,7 +17,7 @@ version() {
   __value=$(__get_value_from_env "${__var}" "${__env_file}")
 # Client versions
   case "${__value}" in
-    *era.yml* | *zklink.yml* )
+    *era.yml* | *zklink.yml* | *treasure.yml* )
       echo "NODE_DOCKER_TAG: $(grep -E '^NODE_DOCKER_TAG=' .env | cut -d '=' -f2)"
       __docompose exec era-node zksync_external_node --version
       ;;&
