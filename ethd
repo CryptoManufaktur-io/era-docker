@@ -39,14 +39,15 @@ start() {
 }
 
 
-__upgrade_postgres() {
+upgrade-postgres() {
   __source_vol="$(basename "$(pwd)")_erapg-data"
   if [ -z "$(__dodocker volume ls -q -f "name=${__source_vol}")" ]; then
     return 0
   fi
 
-  __target_pg=16
+  __target_pg=17
   __during_postgres=1
+  __during_update=1
 
   __source_pg="$(__dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
     alpine:3 cat /var/lib/postgresql/data/PG_VERSION)"
@@ -125,6 +126,7 @@ __upgrade_postgres() {
   echo "${__app_name} has been stopped. You'll need to run \"$__me up\" to start it again."
   echo
   __during_postgres=0
+  __during_update=0
 }
 
 
@@ -857,7 +859,6 @@ update() {
 
   __env_migrate
   __pull_and_build
-  __upgrade_postgres
 
   if [ "${__migrated}" -eq 1 ] && ! cmp -s "${__env_file}" "${__env_file}".source; then
     cp "${__env_file}".source "${__env_file}".bak
@@ -1006,19 +1007,19 @@ __handle_error() {
   if [ "$__during_postgres" -eq 1 ]; then
     echo
     if [ "$__during_migrate" -eq 1 ] && [ "$__migrated" -eq 0 ]; then
-      echo "Era database migration failed, while switching to the migrated data."
+      echo "PostgreSQL database migration failed, while switching to the migrated data."
       echo
-      echo "The Era database is likely corrupted at this point."
+      echo "The database is likely corrupted at this point."
       echo "The backup volume can be seen with \"docker volume ls\"."
     elif [ "$__migrated" -eq 1 ]; then
-      echo "Era database migration failed, after switching to the migrated data."
+      echo "PostgreSQL database migration failed, after switching to the migrated data."
       echo
-      echo "The Era database itself is likely fine, but somewhere in the switch to PostgreSQL ${__target_pg}"
+      echo "The database itself is likely fine, but somewhere in the switch to PostgreSQL ${__target_pg}"
       echo "an error occured, which is likely to keep your node from functioning correctly."
     else
-      echo "Era database migration failed, but before removing the original data."
+      echo "PostgreSQL database migration failed, but before removing the original data."
       echo
-      echo "Your original Era database remains in place."
+      echo "Your original database remains in place."
       echo "You can safely update the node again, this time without migration, and start it."
     fi
   fi
@@ -1067,6 +1068,8 @@ __full_help() {
   echo "    stops the ${__app_name} and destroys all data stores"
   echo "  space"
   echo "    show Docker volume space usage"
+  echo "  upgrade-postgres"
+  echo "    Will migrate to a newer version of PostgreSQL; interactive only"
   echo "  help"
   echo "    print this help screen"
   echo
@@ -1164,7 +1167,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space)
+  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|upgrade-postgres)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"
