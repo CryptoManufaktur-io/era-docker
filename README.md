@@ -81,4 +81,4 @@ Both of this are very similar to era external node but different enough to requi
 Era Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
 third digit bugfixes.
 
-This is Era Docker v4.1.0
+This is Era Docker v4.2.0
