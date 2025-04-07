@@ -87,10 +87,10 @@ __upgrade_postgres() {
 
   __get_docker_free_space
 
-  if [[ "${__free_space}" -lt $(( (__source_size * 2) + 10485760 )) ]]; then
+  if [[ "${__free_space}" -lt $(( __source_size + 10485760 )) ]]; then
     echo
     echo "You don't have enough free space to migrate the database."
-    echo "It is $(( __source_size / 1024 / 1024 )) GiB in size and you need twice as much free again."
+    echo "It is $(( __source_size / 1024 / 1024 )) GiB in size and you need as much free again."
     echo
     __display_docker_dir
     echo
