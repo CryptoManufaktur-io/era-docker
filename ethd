@@ -60,13 +60,17 @@ __upgrade_postgres() {
       return 0
     fi
 
-    while true; do
-      read -rp "Would you like to migrate to PostgreSQL ${__target_pg}? (Y/n) " yn
-      case $yn in
-        [Nn]o | [Nn]  ) echo "Keeping PostgreSQL at version ${__source_pg}"; return 0;;
-        * ) break;;
-      esac
-    done
+    if [ "${__non_interactive:-0}" -eq 0 ]; then
+      while true; do
+        read -rp "Would you like to migrate to PostgreSQL ${__target_pg}? (y/N) " yn
+        case $yn in
+          [Yy]es | [Yy] ) break;;
+          * ) echo "Keeping PostgreSQL at version ${__source_pg}"; return 0;;
+        esac
+      done
+    else # Too large to migrate automatically
+      exit 0
+    fi
   else
     return 0
   fi
@@ -853,6 +857,7 @@ update() {
 
   __env_migrate
   __pull_and_build
+  __upgrade_postgres
 
   if [ "${__migrated}" -eq 1 ] && ! cmp -s "${__env_file}" "${__env_file}".source; then
     cp "${__env_file}".source "${__env_file}".bak
