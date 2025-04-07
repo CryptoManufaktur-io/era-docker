@@ -14,7 +14,7 @@ version() {
   grep "^This is" README.md
   echo
   __var="COMPOSE_FILE"
-  __value=$(__get_value_from_env "${__var}" "${__env_file}")
+  __get_value_from_env "${__var}" "${__env_file}" "__value"
 # Client versions
   case "${__value}" in
     *era.yml* | *zklink.yml* | *treasure.yml* )
@@ -29,47 +29,17 @@ version() {
 }
 
 
-__env_migrate() {
-  if [ ! -f "${__env_file}" ]; then
-    return 0
+__prep_conffiles() {
+# Create ext-network.yml if it doesn't exist
+  if [ ! -f "ext-network.yml" ]; then
+    ${__as_owner} cp ext-network.yml.sample ext-network.yml
   fi
+  return
+}
 
-  __all_vars=( COMPOSE_FILE L1_RPC L1_CHAIN_ID L2_CHAIN_ID MAIN_NODE_URL PG_SNAPSHOT RUSTLOG DOMAIN RPC_HOST RPC_LB \
-    WS_HOST WS_LB RPC_PORT WS_PORT METRICS_PORT SCRIPT_TAG NODE_DOCKER_TAG PG_DOCKER_TAG CALL_TRACES API_NAMESPACES \
-    SQL_NODE SHARE_IP PG_PARAMS PRUNING PRUNING_RETENTION RUST_LOG )
-  __old_vars=( )
-  __new_vars=( )
 
-  __var=ENV_VERSION
-  __target_ver=$(__get_value_from_env "${__var}" "default.env")
-  __source_ver=$(__get_value_from_env "${__var}" "${__env_file}")
-
-  if [[ "${__target_ver}" -le "${__source_ver}" ]]; then # No changes in template, do nothing
-    return 0
-  fi
-
-  echo "Migrating ${__env_file} to version ${__target_ver}"
-  ${__as_owner} cp "${__env_file}" "${__env_file}".source
-  __during_migrate=1
-  __migrated=1
-  ${__as_owner} cp default.env "${__env_file}"
-  # Migrate over user settings
-  for __var in "${__all_vars[@]}"; do
-    __value=$(__get_value_from_env "${__var}" "${__env_file}.source")
-    if [ -n "${__value}" ] || [ "${__var}" = "PG_SNAPSHOT" ] || [ "${__var}" = "METRICS_PORT" ]; then
-      # Handle & gracefully, as well as multi-line
-      __update_value_in_env "${__var}" "$__value" "${__env_file}"
-    fi
-  done
-  # Move value from old variable name(s) to new one(s)
-  for __index in "${!__old_vars[@]}"; do
-    __var=${__old_vars[__index]}
-    __value=$(__get_value_from_env "${__var}" "${__env_file}.source")
-    if [ -n "${__value}" ]; then
-      __update_value_in_env "${__new_vars[__index]}" "$__value" "${__env_file}"
-    fi
-  done
-  __during_migrate=0
+start() {
+  __docompose up -d --remove-orphans "$@"
 }
 
 
@@ -88,6 +58,12 @@ __upgrade_postgres() {
   if [ "${__source_pg}" -lt "${__target_pg}" ]; then
     echo "Era is using PostgreSQL ${__source_pg}. The current version is PostgreSQL ${__target_pg}."
     echo
+    if [[ -z "${STY:-}" && -z "${TMUX:-}" ]]; then
+      echo "Migration would be long-running and this does not appear to be either screen nor tmux."
+      echo "The risk of the migration being disrupted is too high. Skipping migration."
+      return 0
+    fi
+
     while true; do
       read -rp "Would you like to migrate to PostgreSQL ${__target_pg}? (Y/n) " yn
       case $yn in
@@ -96,7 +72,7 @@ __upgrade_postgres() {
       esac
     done
   else
-      return 0
+    return 0
   fi
 
   __source_size="$(__dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
@@ -121,9 +97,6 @@ __upgrade_postgres() {
     return
   fi
 
-  __migrated_vol="$(basename "$(pwd)")_erapg-data-pg${__target_pg}-migrated"
-  __backup_vol="$(basename "$(pwd)")_erapg-data-pg${__source_pg}-backup"
-
   echo "Stopping ${__app_name}"
   __docompose stop era-node && __docompose rm -f era-node
   echo "Stopping PostgreSQL"
@@ -134,35 +107,13 @@ __upgrade_postgres() {
   echo "If this step fails, the ${__app_name} database is likely corrupted."
   echo
 
-  __dodocker pull "pats22/postgres-upgrade:${__source_pg}-to-${__target_pg}"
-  __dodocker volume create "${__migrated_vol}"
-  __dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/${__source_pg}/data" \
-    -v "${__migrated_vol}":"/var/lib/postgresql/${__target_pg}/data" \
-    "pats22/postgres-upgrade:${__source_pg}-to-${__target_pg}"
-  # Adjust ownership. We use 70; postgres-upgrade creates it with 999
-  __dodocker run --rm -v "${__migrated_vol}":"/var/lib/postgres" \
-    alpine:3 chown -R 70:70 /var/lib/postgres
-  # Conversion can leave us with a pg_hba.conf that does not allow connections
-  __dodocker run --rm -v "${__migrated_vol}":"/var/lib/postgres" \
-    alpine:3 sh -c 'grep -qxE "host\s+all\s+all\s+all\s+scram-sha-256" /var/lib/postgres/pg_hba.conf \
-    || echo "host    all             all             all                     scram-sha-256" \
-    >> /var/lib/postgres/pg_hba.conf'
-
-  echo
-  echo "Migration complete, moving data in erapg-data volume to backup"
+  __dodocker pull "pgautoupgrade/pgautoupgrade:${__target_pg}-bookworm"
   __during_migrate=1
-  __dodocker volume create "${__backup_vol}"
   __dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
-    -v "${__backup_vol}":"/var/lib/postgresql/${__source_pg}/data" \
-    alpine:3 mv /var/lib/postgresql/data/. "/var/lib/postgresql/${__source_pg}/data/"
-
-  echo "Moving migrated data to erapg-data volume"
-  __dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
-    -v "${__migrated_vol}":"/var/lib/postgresql/${__target_pg}/data" \
-    alpine:3 mv "/var/lib/postgresql/${__target_pg}/data/." /var/lib/postgresql/data/
+   -e PGAUTO_ONESHOT=yes -e POSTGRES_PASSWORD=postgres \
+   "pgautoupgrade/pgautoupgrade:${__target_pg}-bookworm"
 
   __migrated=1
-  __dodocker volume remove "${__migrated_vol}"
 
   echo
   echo "Adjusting PostgreSQL Docker tag"
@@ -173,9 +124,97 @@ __upgrade_postgres() {
   __update_value_in_env "${__var}" "${!__var}" "${__env_file}"
   echo "${__app_name} has been stopped. You'll need to run \"$__me up\" to start it again."
   echo
-  echo "A copy of your old Era database is in the Docker volume ${__backup_vol}."
-  echo "Confirm that everything works, and then delete it with \"docker volume rm ${__backup_vol}\"."
   __during_postgres=0
+}
+
+
+__env_migrate() {
+  if [ ! -f "${__env_file}" ]; then
+    return 0
+  fi
+
+  __old_vars=( )
+  __new_vars=( )
+
+  __var=ENV_VERSION
+  __get_value_from_env "${__var}" "default.env" "__target_ver"
+  __get_value_from_env "${__var}" "${__env_file}" "__source_ver"
+
+  if [ "${__debug}" -eq 1 ]; then  # Find any values in default.env that contain dashes
+    __error=0
+    while IFS= read -r __line; do
+      # Skip blank lines and comments
+      [[ -z "${__line}" || "${__line}" =~ ^# ]] && continue
+
+      # Warn on dash-containing variable names
+      if [[ "${__line}" =~ ^([A-Za-z0-9_-]+)= ]]; then
+        __varname="${BASH_REMATCH[1]}"
+        if [[ "${__varname}" = *-* ]]; then
+          echo "❌ Error: Variable '${__varname}' contains a dash and would not be usable in Bash."
+          (( ++__error ))
+        fi
+        if [[ "${__varname}" = "ENV_VERSION" ]]; then
+          continue
+        fi
+      else
+        continue  # Doesn't match variable assignment format
+      fi
+    done < "./default.env"
+    if [ "${__error}" -gt 0 ]; then
+      exit 1
+    fi
+  fi
+
+# shellcheck disable=SC2154
+  if [[ "${__keep_targets}" -eq 1 && "${__target_ver}" -le "${__source_ver}" ]]; then # No changes in template, do nothing
+    return 0
+  fi
+
+  if [ "${__keep_targets}" -eq 0 ]; then
+    echo "Refreshing build targets in ${__env_file}"
+  fi
+  if [[ "${__target_ver}" -gt "${__source_ver}" ]]; then
+    echo "Migrating ${__env_file} to version ${__target_ver}"
+  fi
+
+  ${__as_owner} cp "${__env_file}" "${__env_file}".source
+  __during_migrate=1
+  __migrated=1
+  ${__as_owner} cp default.env "${__env_file}"
+
+  # Migrate over user settings
+  while IFS= read -r __line; do  # read default.env and process all variables in it
+    # Skip blank lines and comments
+    [[ -z "${__line}" || "${__line}" =~ ^# ]] && continue
+
+    if [[ "${__line}" =~ ^([A-Za-z0-9_-]+)= ]]; then
+      __var="${BASH_REMATCH[1]}"
+    else
+      continue  # Doesn't match variable assignment format
+    fi
+    if [[ "${__var}" = "ENV_VERSION" ]]; then
+      continue
+    fi
+
+    __get_value_from_env "${__var}" "${__env_file}.source" "__value"
+    if [ "${__found}" -eq 1 ]; then  # Only if variable isn't new in default.env
+      if [[ "${__keep_targets}" -eq 0 && "$__var" =~ (_TAG|_REPO|_DOCKERFILE)$ ]]; then
+        __get_value_from_env "${__var}" "default.env" "__value" # Reset build target to default.env value
+      fi
+      # Handle & gracefully, as well as multi-line
+      __update_value_in_env "${__var}" "$__value" "${__env_file}"
+    fi
+  done < "./default.env"
+
+  # Move value from old variable name(s) to new one(s)
+  for __index in "${!__old_vars[@]}"; do
+    __var=${__old_vars[__index]}
+    __get_value_from_env "${__var}" "${__env_file}.source" "__value"
+    if [ -n "${__value}" ]; then
+      __update_value_in_env "${__new_vars[__index]}" "$__value" "${__env_file}"
+    fi
+  done
+  __during_migrate=0
 }
 
 
@@ -192,129 +231,157 @@ __docompose() {
 
 
 __get_value_from_env() {
-    local __var_name="$1"
-    local __env_file="$2"
-    local __value
+  # Call with variable name to read, env file name, and global variable to assign the value to
+  # Also sets global __found
+  local __var_name="$1"
+  local __env_file="$2"
+  local __output_var="$3"
+  local __output
+  local __parsed_value
 
-    __value=$(awk -v var="$__var_name" '
-        BEGIN { __found = 0; __value = "" }
+  if [[ "${__output_var}" == "__parsed_value" || "${__output_var}" == "__output_var" \
+      || "${__output_var}" == "__output" || "${__output_var}" == "__env_file" \
+      || "${__output_var}" == "__var_name" ]]; then
+    echo "❌ __get_value_from_env was called with a conflicting output variable: $__output_var" >&2
+    echo "This is a bug."  >&2
+    exit 1
+  fi
 
-        # Skip empty lines and comments
-        /^#|^\s*$/ {
-            next
-        }
+  __output=$(awk -v var="$__var_name" '
+    BEGIN { __found = 0; __value = "" }
 
-        # Match single-line unquoted value
-        $0 ~ "^[ \t]*"var"=[^\"].*$" {
-            gsub("^[ \t]*"var"=", "")
-            gsub(/^[ \t]*|[ \t]*$/, "", $0)
-            __value = $0
-            __found = 1
-            exit
-        }
+    # Skip empty lines and comments
+    /^#|^\s*$/ {
+      next
+    }
 
-        # Match a quoted single-line value
-        $0 ~ "^[ \t]*"var"=\"[^\"]*\"[ \t]*$" {
-            gsub("^[ \t]*"var"=\"", "")
-            gsub(/"[ \t]*$/, "", $0)
-            __value = "\"" $0 "\""
-            __found = 1
-            exit
-        }
+    # Match single-line unquoted value
+    $0 ~ "^[ \t]*"var"=[^\"].*$" {
+      gsub("^[ \t]*"var"=", "")
+      gsub(/^[ \t]*|[ \t]*$/, "", $0)
+      __value = $0
+      __found = 1
+      exit
+    }
 
-        # Match the start of a multi-line value (with opening quote)
-        $0 ~ "^[ \t]*"var"=\"[^\"]*$" {
-            gsub("^[ \t]*"var"=\"", "")
-            __value = "\"" $0 "\n"
-            __found = 1
-            next
-        }
+    # Match empty unquoted value
+    $0 ~ "^[ \t]*"var"=$" {
+       __value = ""
+       __found = 1
+       exit
+    }
 
-        # Continue collecting lines for a multi-line value
-        __found && !/"[ \t]*$/ {
-            __value = __value $0 "\n"
-            next
-        }
+    # Match a quoted single-line value
+    $0 ~ "^[ \t]*"var"=\"[^\"]*\"[ \t]*$" {
+      gsub("^[ \t]*"var"=\"", "")
+      gsub(/"[ \t]*$/, "", $0)
+      __value = "\"" $0 "\""
+      __found = 1
+      exit
+    }
 
-        # End of a multi-line value (with closing quote)
-        __found && /"[ \t]*$/ {
-            gsub(/[ \t]*"[ \t]*$/, "")
-            __value = __value $0 "\""
-            __found = 1
-            exit
-        }
+    # Match the start of a multi-line value (with opening quote)
+    $0 ~ "^[ \t]*"var"=\"[^\"]*$" {
+      gsub("^[ \t]*"var"=\"", "")
+      __value = "\"" $0 "\n"
+      __found = 1
+      next
+    }
 
-        END {
-            if (__found) {
-                # Print the value as is, including quotes for multi-line
-                print __value
-            }
-        }
-    ' "$__env_file")
+    # Continue collecting lines for a multi-line value
+    __found && !/"[ \t]*$/ {
+      __value = __value $0 "\n"
+      next
+    }
 
-    printf "%s" "$__value"
+    # End of a multi-line value (with closing quote)
+    __found && /"[ \t]*$/ {
+      gsub(/[ \t]*"[ \t]*$/, "")
+      __value = __value $0 "\""
+      __found = 1
+      exit
+    }
+
+    END {
+      # Print here-doc style so we can parse with awk
+      # Print the value as is, including quotes for multi-line
+      print "__value<<EOF"
+      print __value
+      print "EOF"
+      print "__found=" __found
+    }
+  ' "$__env_file")
+
+  # Parse __value using here-doc style
+  __parsed_value=$(awk '/^__value<<EOF$/ {getline; while ($0 != "EOF") { print; getline } }' <<< "$__output")
+  # Parse __found directly into a global variable
+  __found=$(awk -F= '/^__found=/ {print $2}' <<< "$__output")
+
+  # assign value to caller’s variable
+  printf -v "$__output_var" '%s' "$__parsed_value"
 }
 
 
 __update_value_in_env() {
 # Call as __update_value_in_env "$__var" "$__value" "$__env_file"
-    local __var_name="$1"
-    local __new_value="$2"
-    local __env_file="$3"
+  local __var_name="$1"
+  local __new_value="$2"
+  local __env_file="$3"
 
-    # Escape backslashes for safety
-    local __escaped_value
-    __escaped_value=$(printf '%s' "${__new_value}" | sed 's/\\/\\\\/g')
+  # Escape backslashes for safety
+  local __escaped_value
+  __escaped_value=$(printf '%s' "${__new_value}" | sed 's/\\/\\\\/g')
 
-    # Check if the variable already exists in the .env file
-    if grep -q "^[ \t]*${__var_name}=" "${__env_file}"; then
-        # Variable exists, update it
-        awk -v var="$__var_name" -v new_value="$__escaped_value" '
-            BEGIN { in_block = 0; multi_line = 0 }
+  # Check if the variable already exists in the .env file
+  if grep -q "^[ \t]*${__var_name}=" "${__env_file}"; then
+    # Variable exists, update it
+    awk -v var="${__var_name}" -v new_value="${__escaped_value}" '
+      BEGIN { in_block = 0; multi_line = 0 }
 
-            # Match the line that starts with the variable name
-            $0 ~ "^[ \t]*" var "=" {
-                # If the value starts with a quote, it may be a multi-line
-                if ($0 ~ "^[ \t]*" var "=\"") {
-                    # Start of multi-line value
-                    multi_line = 1
-                    # Print the variable name with the new value, replacing & safely
-                    gsub(/&/, "\\&", new_value)
-                    print var "=" new_value
-                } else {
-                    # Single-line value
-                    gsub(/&/, "\\&", new_value)
-                    print var "=" new_value
-                }
-                # Set the flag to indicate we are processing the target variable block
-                in_block = 1
-                next
-            }
+      # Match the line that starts with the variable name
+      $0 ~ "^[ \t]*" var "=" {
+        # If the value starts with a quote, it may be a multi-line
+        if ($0 ~ "^[ \t]*" var "=\"") {
+          # Start of multi-line value
+          multi_line = 1
+          # Print the variable name with the new value, replacing & safely
+          gsub(/&/, "\\&", new_value)
+          print var "=" new_value
+        } else {
+          # Single-line value
+          gsub(/&/, "\\&", new_value)
+          print var "=" new_value
+        }
+        # Set the flag to indicate we are processing the target variable block
+        in_block = 1
+        next
+      }
 
-            # If we encounter a new variable definition, stop skipping lines
-            /^[A-Z_][A-Z0-9_]*=/ && in_block {
-                in_block = 0
-                multi_line = 0
-            }
-            # Continue to skip lines in a multi-line block if multi_line is true
-            multi_line && !/"[ \t]*$/ {
-                next
-            }
+      # If we encounter a new variable definition, stop skipping lines
+      /^[A-Z_][A-Z0-9_]*=/ && in_block {
+        in_block = 0
+        multi_line = 0
+      }
+      # Continue to skip lines in a multi-line block if multi_line is true
+      multi_line && !/"[ \t]*$/ {
+        next
+      }
 
-            # If we reach the end of a multi-line value, reset flags
-            multi_line && /"[ \t]*$/ {
-                in_block = 0
-                multi_line = 0
-                next
-            }
+      # If we reach the end of a multi-line value, reset flags
+      multi_line && /"[ \t]*$/ {
+        in_block = 0
+        multi_line = 0
+        next
+      }
 
-            # Print all lines if not in the target variable block
-            { print }
-        ' "$__env_file" > "${__env_file}.tmp" && mv "${__env_file}.tmp" "$__env_file"
-    else
-        # Variable does not exist, append it
-        printf "%s=%s\n" "$__var_name" "$__escaped_value" >> "$__env_file"
-    fi
+      # Print all lines if not in the target variable block
+      { print }
+    ' "${__env_file}" | ${__as_owner} tee "${__env_file}.tmp" >/dev/null
+    ${__as_owner} mv "${__env_file}.tmp" "${__env_file}"
+  else
+    # Variable does not exist, append it
+    printf "%s=%s\n" "${__var_name}" "${__escaped_value}" | ${__as_owner} tee -a "${__env_file}" >/dev/null
+  fi
 }
 
 
@@ -505,8 +572,6 @@ __check_for_snap() {
     echo "but in a nutshell \"$__me stop\" followed by \"sudo snap remove --purge docker\" followed by a reboot,"
     echo "and as needed install docker-ce or docker.io with apt."
     echo
-    echo "Do join us on CryptoManufaktur Discord to work through this issue."
-    echo
     echo "Aborting, this is not safe"
     exit 1
   fi
@@ -631,7 +696,7 @@ __display_docker_volumes() {
     echo
   else
     echo "Here are the Docker volumes used by this copy of ${__project_name} and their space usage:"
-    __dodocker system df -v | grep -A 50 "VOLUME NAME" | grep "^$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+    __dodocker system df -v | grep -A 500 "VOLUME NAME" | grep "^$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
     echo
   fi
   echo "If there is some mystery space being taken up, try \"sudo ncdu /\"."
@@ -653,7 +718,7 @@ space() {
 }
 
 
-# Warn user if space is low, so they can prune
+# Warn user if space is low
 __check_disk_space() {
   __get_docker_free_space
 
@@ -662,9 +727,6 @@ __check_disk_space() {
     echo "You have less than 50 GiB of free disk space:"
     echo
     __display_docker_dir
-    echo
-    echo "Pruning does not appear an option for your client mix."
-    echo "If total space is less than 1.8 TiB, consider cloning to a larger drive."
     __display_docker_volumes
   fi
 }
@@ -699,6 +761,18 @@ __pull_and_build() {
 # Arguments are passed, but shellcheck doesn't recognize that
 # shellcheck disable=SC2120
 update() {
+# Only one copy of update() should run per stack
+  local __script_dir
+  __script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+  local __uniq_id="${__script_dir//\//_}"
+  local __lock_file="${__uniq_id}_lock"
+  ${__as_owner} touch "/tmp/${__lock_file}"
+  exec 200<"/tmp/${__lock_file}"
+  if ! flock -n 200; then
+    echo "Another instance of \"${__me} update\" is running. Aborting."
+    exit 1
+  fi
+
   __during_update=1
   if [[ $(${__as_owner} git status --porcelain) ]]; then
     __dirty=1
@@ -730,11 +804,11 @@ update() {
     set +e
     ${__as_owner} git config pull.rebase false
     __var="SCRIPT_TAG"
-    __value=$(__get_value_from_env "${__var}" "${__env_file}")
+    __get_value_from_env "${__var}" "${__env_file}" "__value"
     if [ -z "${__value}" ] || [ "${__value}" = "latest" ]; then
       export ETHDPINNED=""
       __branch=$(git rev-parse --abbrev-ref HEAD)
-      if [[ "${__branch}" =~ ^tag-v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      if [[ "${__branch}" =~ ^tag-* ]]; then
         git checkout main
       fi
       ${__as_owner} git pull
@@ -749,6 +823,36 @@ update() {
     # to avoid infinite loop
     export ETHDSECUNDO=1
     exec "${BASH_SOURCE[0]}" update "$@"
+  fi
+
+  __keep_targets=1
+  __debug=0
+  while :
+  do
+    if [ -z "${1+x}" ]; then
+      break
+    fi
+    case "$1" in
+      --refresh-targets | --reset-targets)
+        __keep_targets=0
+        shift
+        ;;
+      --non-interactive)
+        __non_interactive=1
+        shift
+        ;;
+      --debug)
+        __debug=1
+        shift
+        ;;
+      *)
+        echo "Error: Unknown option: $1" >&2
+        shift
+        ;;
+    esac
+  done
+  if [ "${ETHD_FRONTEND:-}" = "noninteractive" ]; then
+    __non_interactive=1
   fi
 
   __env_migrate
@@ -783,7 +887,6 @@ find the original contents in ${__env_file}.bak."
   fi
 
   __nag_os_version
-  __upgrade_postgres
 
   unset ETHDSECUNDO
   unset GITEXITCODE
@@ -801,25 +904,15 @@ find the original contents in ${__env_file}.bak."
     echo "${__project_name} version is pinned to ${ETHDPINNED} in \".env\"."
     echo "Please make sure to run compatible client versions."
   fi
+# Release lock and remove lock file
+  exec 200<&-
+  ${__as_owner} rm -f "/tmp/${__lock_file}"
   __during_update=0
-}
-
-
-__prep_conffiles() {
-# Create ext-network.yml if it doesn't exist
-  if [ ! -f "ext-network.yml" ]; then
-    ${__as_owner} cp ext-network.yml.sample ext-network.yml
-  fi
 }
 
 
 upgrade() {
   update
-}
-
-
-start() {
-  __docompose up -d --remove-orphans "$@"
 }
 
 
@@ -912,26 +1005,43 @@ __handle_error() {
   if [ "$__during_postgres" -eq 1 ]; then
     echo
     if [ "$__during_migrate" -eq 1 ] && [ "$__migrated" -eq 0 ]; then
-        echo "Era database migration failed, while switching to the migrated data."
-        echo
-        echo "The Era database is likely corrupted at this point."
-        echo "The backup volume can be seen with \"docker volume ls\"."
+      echo "Era database migration failed, while switching to the migrated data."
+      echo
+      echo "The Era database is likely corrupted at this point."
+      echo "The backup volume can be seen with \"docker volume ls\"."
     elif [ "$__migrated" -eq 1 ]; then
-        echo "Era database migration failed, after switching to the migrated data."
-        echo
-        echo "The Era database itself is likely fine, but somewhere in the switch to PostgreSQL ${__target_pg}"
-        echo "an error occured, which is likely to keep your node from functioning correctly."
+      echo "Era database migration failed, after switching to the migrated data."
+      echo
+      echo "The Era database itself is likely fine, but somewhere in the switch to PostgreSQL ${__target_pg}"
+      echo "an error occured, which is likely to keep your node from functioning correctly."
     else
-        echo "Era database migration failed, but before removing the original data."
-        echo
-        echo "Your original Era database remains in place."
-        echo "You can safely update the node again, this time without migration, and start it."
+      echo "Era database migration failed, but before removing the original data."
+      echo
+      echo "Your original Era database remains in place."
+      echo "You can safely update the node again, this time without migration, and start it."
     fi
   fi
 }
 
 
-help() {
+__update_help() {
+  echo "usage: $__me update [--refresh-targets] [--non-interactive] [--debug]"
+  echo
+  echo "Updates Eth Docker itself, as required the contents of \".env\", and the clients."
+  echo
+  echo "A combination of \"git pull\" for Eth Docker, some bash scripting to bring new variables from \"default.env\","
+  echo "and \"docker compose pull\" as well as \"docker compose build\" for the clients."
+  echo
+  echo "If warranted, will also offer resync when clients require it, or upgrade of PostgreSQL version."
+  echo
+  echo "\"--refresh-targets\" sets Docker tags, source targets, and repos of clients back to the defaults in \"default.env\"."
+  echo "\"--non-interactive\" does not ask questions and assumes Yes for database resyncs and migrations."
+  echo "\"--debug\" handles some CI sanity checks."
+  echo
+}
+
+
+__full_help() {
   echo "usage: ${__me} [-h|--help] <command>"
   echo
   echo "commands:"
@@ -969,6 +1079,14 @@ help() {
 }
 
 
+help() {
+  case $* in
+    *update*) __update_help;;
+    *) __full_help;;
+  esac
+}
+
+
 # Main body from here
 __env_file=.env
 __during_update=0
@@ -980,8 +1098,8 @@ __me="./$(basename "${BASH_SOURCE[0]}")"
 
 trap '__handle_error $? $LINENO' ERR
 
-if [[ "$#" -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
-  help
+if [[ "$#" -eq 0 || "$*" =~ "-h" ]]; then # Lazy match for -h and --help but also --histogram, so careful here
+  help "$@"
   exit 0
 fi
 
