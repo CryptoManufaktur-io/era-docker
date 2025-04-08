@@ -90,10 +90,11 @@ upgrade-postgres() {
 
   __get_docker_free_space
 
-  if [[ "${__free_space}" -lt $(( __source_size + 10485760 )) ]]; then
+  if (( __free_space < __source_size / 2 )); then
     echo
     echo "You don't have enough free space to migrate the database."
-    echo "It is $(( __source_size / 1024 / 1024 )) GiB in size and you need as much free again."
+    echo "It is $(( __source_size / 1024 / 1024 )) GiB in size and ${__me} is looking for half that again,"
+    echo "to be on the safe side."
     echo
     __display_docker_dir
     echo
@@ -113,7 +114,7 @@ upgrade-postgres() {
   __dodocker pull "pgautoupgrade/pgautoupgrade:${__target_pg}-bookworm"
   __during_migrate=1
   __dodocker run --rm -v "${__source_vol}":"/var/lib/postgresql/data" \
-   -e PGAUTO_ONESHOT=yes -e POSTGRES_PASSWORD=postgres \
+   -e PGAUTO_ONESHOT=yes -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres \
    "pgautoupgrade/pgautoupgrade:${__target_pg}-bookworm"
 
   __migrated=1
@@ -125,7 +126,7 @@ upgrade-postgres() {
 # shellcheck disable=SC2034
   PG_DOCKER_TAG=${__target_pg}-bookworm
   __update_value_in_env "${__var}" "${!__var}" "${__env_file}"
-  echo "${__app_name} has been stopped. You'll need to run \"$__me up\" to start it again."
+  echo "${__app_name} has been stopped. You'll need to run \"${__me} update\" and \"${__me} up\" to start it again."
   echo
   __during_postgres=0
   __during_update=0
