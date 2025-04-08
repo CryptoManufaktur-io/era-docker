@@ -126,7 +126,7 @@ upgrade-postgres() {
 # shellcheck disable=SC2034
   PG_DOCKER_TAG=${__target_pg}-bookworm
   __update_value_in_env "${__var}" "${!__var}" "${__env_file}"
-  echo "${__app_name} has been stopped. You'll need to run \"$__me up\" to start it again."
+  echo "${__app_name} has been stopped. You'll need to run \"${__me} update\" and \"${__me} up\" to start it again."
   echo
   __during_postgres=0
   __during_update=0
