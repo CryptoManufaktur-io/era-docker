@@ -1,0 +1,73 @@
+# Lens is just different enough from Era that a separate yml makes sense
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
+services:
+  era-node:
+    restart: "unless-stopped"
+    image: matterlabs/external-node:${NODE_DOCKER_TAG}
+    stop_grace_period: 5m
+    stop_signal: SIGINT
+    command: --components=all,da_fetcher
+    environment: # The node is configured entirely via ENV variables
+      - DATABASE_URL=postgres://postgres:postgres@${SQL_NODE}/eranode
+      - DATABASE_POOL_SIZE=10
+      - EN_STATE_CACHE_PATH=/db/state_keeper
+      - EN_MERKLE_TREE_PATH=/db/lightweight
+      - EN_ETH_CLIENT_URL=${L1_RPC}
+      - EN_MAIN_NODE_URL=${MAIN_NODE_URL}
+      - EN_L2_CHAIN_ID=${L2_CHAIN_ID}
+      - EN_L1_CHAIN_ID=${L1_CHAIN_ID}
+      - EN_HTTP_PORT=${RPC_PORT:-3060}
+      - EN_WS_PORT=${WS_PORT:-3061}
+# Comment this out if not collecting metrics, to avoid memory leak
+      - EN_PROMETHEUS_PORT=${METRICS_PORT:-3322}
+      - EN_HEALTHCHECK_PORT=3081
+      - EN_L1_BATCH_COMMIT_DATA_GENERATOR_MODE=Validium
+      - RUST_LOG=${RUST_LOG}
+      - EN_SNAPSHOTS_RECOVERY_ENABLED=true
+      - EN_SNAPSHOTS_OBJECT_STORE_BUCKET_BASE_URL=raas-lens-mainnet-external-node-snapshots
+      - EN_SNAPSHOTS_OBJECT_STORE_MODE=GCSAnonymousReadOnly
+      - EN_DA_CLIENT=Avail
+      - EN_DA_AVAIL_CLIENT_TYPE=FullClient
+      - EN_DA_BRIDGE_API_URL=https://bridge-api.avail.so
+      - EN_DA_TIMEOUT_MS=20000
+      - EN_DA_API_NODE_URL=wss://mainnet.avail-rpc.com
+      - EN_DA_APP_ID=26
+      - EN_DA_SECRETS_SEED_PHRASE=toilet extra dragon uniform crumble picnic duty forest toward clinic human hope
+    volumes:
+      - lens-data:/db
+      - /etc/localtime:/etc/localtime:ro
+    <<: *logging
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${RPC_HOST:-lens}.service=${RPC_HOST:-lens}
+      - traefik.http.routers.${RPC_HOST:-lens}.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-lens}.rule=Host(`${RPC_HOST:-lens}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-lens}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${RPC_HOST:-lens}lb.service=${RPC_HOST:-lens}
+      - traefik.http.routers.${RPC_HOST:-lens}lb.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-lens}lb.rule=Host(`${RPC_LB:-lens-lb}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-lens}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${RPC_HOST:-lens}.loadbalancer.server.port=${RPC_PORT:-3060}
+      - traefik.http.routers.${WS_HOST:-lensws}.service=${WS_HOST:-lensws}
+      - traefik.http.routers.${WS_HOST:-lensws}.entrypoints=websecure
+      - traefik.http.routers.${WS_HOST:-lensws}.rule=Host(`${WS_HOST:-lensws}.${DOMAIN}`)
+      - traefik.http.routers.${WS_HOST:-lensws}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${WS_HOST:-lensws}lb.service=${WS_HOST:-lensws}
+      - traefik.http.routers.${WS_HOST:-lensws}lb.entrypoints=websecure
+      - traefik.http.routers.${WS_HOST:-lensws}lb.rule=Host(`${WS_LB:-lensws-lb}.${DOMAIN}`)
+      - traefik.http.routers.${WS_HOST:-lensws}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${WS_HOST:-lensws}.loadbalancer.server.port=${WS_PORT:-3061}
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=${METRICS_PORT:-}
+      - metrics.network=lens-l2-${L2_CHAIN_ID}-l1-${L1_CHAIN_ID}
+
+volumes:
+  lens-data:
