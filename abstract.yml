@@ -36,7 +36,7 @@ services:
       - EN_ESTIMATE_GAS_ACCEPTABLE_OVERESTIMATION=5000
       - RUST_LOG=${RUST_LOG}
     volumes:
-      - treasure-data:/db
+      - node-data:/db
       - /etc/localtime:/etc/localtime:ro
     <<: *logging
     labels:
