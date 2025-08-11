@@ -13,7 +13,7 @@ services:
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
     stop_grace_period: 5m
     stop_signal: SIGINT
-    command: --components=all,da_fetcher
+    command: --components=core,api,da_fetcher,tree_fetcher
     environment: # The node is configured entirely via ENV variables
       - DATABASE_URL=postgres://postgres:postgres@${SQL_NODE}/eranode
       - DATABASE_POOL_SIZE=10
