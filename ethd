@@ -10,14 +10,12 @@ __compose_upgraded=0
 
 
 version() {
-# script version
   grep "^This is" README.md
   echo
   __var="COMPOSE_FILE"
   __get_value_from_env "${__var}" "${__env_file}" "__value"
-# Client versions
   case "${__value}" in
-    *era.yml* | *zklink.yml* | *treasure.yml* )
+    *era.yml* | *zklink.yml* | *treasure.yml* | *lens.yml* | *abstract.yml* )
       echo "NODE_DOCKER_TAG: $(grep -E '^NODE_DOCKER_TAG=' .env | cut -d '=' -f2)"
       __docompose exec era-node zksync_external_node --version
       ;;&
