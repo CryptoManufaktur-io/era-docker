@@ -11,6 +11,10 @@ services:
   era-node:
     restart: "unless-stopped"
     image: matterlabs/external-node:${NODE_DOCKER_TAG}
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     stop_grace_period: 5m
     stop_signal: SIGINT
     environment: # The node is configured entirely via ENV variables
