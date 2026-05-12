@@ -720,6 +720,49 @@ space() {
   __display_docker_volumes
 }
 
+check-sync() {
+  if [[ $# -eq 0 ]]; then
+    __var="RPC_PORT"
+    __get_value_from_env "${__var}" "${__env_file}" "__RPC_PORT"
+
+    __compose_service=""
+    __rpc=""
+
+    __var="COMPOSE_FILE"
+    __get_value_from_env "${__var}" "${__env_file}" "__value"
+    case "${__value}" in
+      *era.yml* )
+        __compose_service="era-node"
+        __rpc="https://mainnet.era.zksync.io"
+        ;;&
+      *lens.yml* )
+        __compose_service="era-node"
+        __rpc="https://rpc.lens.xyz"
+        ;;&
+      *treasure.yml* )
+        __compose_service="era-node"
+        __rpc="https://rpc.treasure.lol"
+        ;;&
+      *zklink.yml* )
+        __compose_service="era-node"
+        __rpc="https://rpc.zklink.io"
+        ;;&
+    esac
+
+    if [[ "$__rpc" = "" ]]; then
+      echo "Unknown network, pass necessary arguments for check sync"
+      bash scripts/check_sync.sh --help
+      exit 1
+    fi
+
+    echo "Using RPC_PORT: ${__RPC_PORT} publicRPC: ${__rpc} composeService: ${__compose_service}"
+
+    bash scripts/check_sync.sh --public-rpc "${__rpc}" --compose-service "${__compose_service}" --local-rpc "http://127.0.0.1:${__RPC_PORT}" || true
+  else
+    bash scripts/check_sync.sh "$@" || true
+  fi
+}
+
 
 # Warn user if space is low
 __check_disk_space() {
@@ -1069,6 +1112,8 @@ __full_help() {
   echo "    stops the ${__app_name} and destroys all data stores"
   echo "  space"
   echo "    show Docker volume space usage"
+  echo "  check-sync"
+  echo "    Call the check sync script for checking status of the node"
   echo "  upgrade-postgres"
   echo "    Will migrate to a newer version of PostgreSQL; interactive only"
   echo "  help"
@@ -1103,7 +1148,7 @@ __me="./$(basename "${BASH_SOURCE[0]}")"
 
 trap '__handle_error $? $LINENO' ERR
 
-if [[ "$#" -eq 0 || "$*" =~ "-h" ]]; then # Lazy match for -h and --help but also --histogram, so careful here
+if [[ "$#" -eq 0 || ("$*" =~ "-h" && ! "$*" =~ "check-sync") ]]; then # Lazy match for -h and --help but also --histogram, so careful here
   help "$@"
   exit 0
 fi
@@ -1168,7 +1213,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|upgrade-postgres)
+  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|upgrade-postgres|check-sync)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"
