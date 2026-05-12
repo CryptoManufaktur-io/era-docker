@@ -731,6 +731,10 @@ check-sync() {
     __var="COMPOSE_FILE"
     __get_value_from_env "${__var}" "${__env_file}" "__value"
     case "${__value}" in
+      *abstract.yml* )
+        __compose_service="era-node"
+        __rpc="https://api.mainnet.abs.xyz"
+        ;;&
       *era.yml* )
         __compose_service="era-node"
         __rpc="https://mainnet.era.zksync.io"
